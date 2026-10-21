@@ -4,7 +4,7 @@ Derived from the code. If this disagrees with the code, the code wins.
 
 ## What it is
 
-BeyondCodeFM is a static podcast website. The UI is vanilla React (Vite, React Router 6, Tailwind). Pages are prerendered to `dist/` and hosted on Cloudflare Pages. The only dynamic endpoint is Open Graph image generation.
+BeyondCodeFM is a static podcast website. The UI is vanilla React (Vite, React Router 6, Tailwind). Pages are prerendered to `dist/` and served as static assets of a Cloudflare Worker. The only dynamic endpoint is Open Graph image generation.
 
 This replaced a Next.js App Router app. `package.json` must not gain `next`, `next-intl`, or `next-themes`.
 
@@ -34,9 +34,9 @@ Vitest sets `VITEST`, which skips feed load and the middleware.
 
 `npm run preview` serves `dist/` only. The plugin’s preview middleware repeats the locale 301s and maps URLs onto those HTML files.
 
-### 3. Cloudflare Pages Function — OG PNG
+### 3. Cloudflare Worker — OG PNG
 
-`functions/api/og.tsx` handles `GET /api/og?cover=`. It is **not** a Vite route. `public/_routes.json` invokes Functions only for `/api/og`; everything else is static.
+`worker/index.tsx` is the Worker `main`. It handles `GET /api/og?cover=` and passes anything else to `env.ASSETS`. It is **not** a Vite route. `assets.run_worker_first: ["/api/og"]` in `wrangler.jsonc` means only that path runs the Worker; everything else is served straight from `dist/`.
 
 `parseCoverUrl` accepts only `http:` / `https:` URLs with no credentials. The card layout is `src/lib/og-image.tsx` (Satori: every box `display: flex`). `nodejs_compat` in `wrangler.jsonc` is required by `@cloudflare/pages-plugin-vercel-og`.
 
@@ -117,4 +117,18 @@ Cloudflare build settings set only:
 
 ## Deploy
 
-`wrangler.jsonc`: project `beyondcode-fm`, output `./dist`, `nodejs_compat`. Build command `npm run build`. Git integration or `npm run pages:deploy`.
+Cloudflare Workers with static assets (Workers Builds). `wrangler.jsonc`:
+
+| Key | Value | Why |
+|---|---|---|
+| `name` | `beyondcode-fm` | Must match the Worker name in the dashboard |
+| `main` | `./worker/index.tsx` | OG endpoint |
+| `assets.directory` | `./dist` | Prerendered site |
+| `assets.run_worker_first` | `["/api/og"]` | Only the OG endpoint invokes the Worker |
+| `assets.html_handling` | `drop-trailing-slash` | `/{id}` serves `{id}/index.html` with no redirect, matching `StripTrailingSlash` and `data-path` |
+| `assets.not_found_handling` | `404-page` | Unknown paths get `dist/404.html` with status 404 |
+| `compatibility_flags` | `nodejs_compat` | Needed by `@cloudflare/pages-plugin-vercel-og` |
+
+`public/_redirects` is copied into `dist/` and applied by Workers static assets (locale 301s).
+
+Dashboard build settings: build command `npm run build`, deploy command `npx wrangler deploy`. Locally: `npm run worker:dev` / `npm run worker:deploy`.

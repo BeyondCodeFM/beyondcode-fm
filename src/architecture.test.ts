@@ -17,11 +17,12 @@ describe('architecture contracts', () => {
     expect(html).toContain('<div id="root">')
   })
 
-  it('limits Pages Functions to /api/og', () => {
-    const routes = JSON.parse(
-      readFileSync(join(root, 'public/_routes.json'), 'utf8'),
-    ) as { include: string[] }
-    expect(routes.include).toEqual(['/api/og'])
+  it('runs the Worker only for /api/og and serves dist/ as assets', () => {
+    const config = readFileSync(join(root, 'wrangler.jsonc'), 'utf8')
+    expect(config).toMatch(/"main":\s*"\.\/worker\/index\.tsx"/)
+    expect(config).toMatch(/"directory":\s*"\.\/dist"/)
+    expect(config).toMatch(/"run_worker_first":\s*\["\/api\/og"\]/)
+    expect(config).not.toContain('pages_build_output_dir')
   })
 
   it('keeps leftover locale redirects', () => {

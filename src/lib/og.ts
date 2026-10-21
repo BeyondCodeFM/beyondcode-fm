@@ -1,7 +1,7 @@
 export const OG_WIDTH = 1200
 export const OG_HEIGHT = 630
 
-/** Only http(s) covers, no credentials. Used by the Pages Function. */
+/** Only http(s) covers, no credentials. Used by the Worker (`worker/index.tsx`). */
 export function parseCoverUrl(raw: string | null | undefined): string | null {
   if (!raw) return null
   try {

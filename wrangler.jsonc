@@ -1,8 +1,18 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "beyondcode-fm",
-  "pages_build_output_dir": "./dist",
+  "main": "./worker/index.tsx",
   "compatibility_date": "2026-08-29",
   // nodejs_compat is required by @cloudflare/pages-plugin-vercel-og.
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Serve dist/{id}/index.html at /{id}: canonical URLs have no trailing slash
+    // (StripTrailingSlash, data-path), so the default redirect to /{id}/ would break hydration.
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page",
+    // Only the OG endpoint runs the Worker; the rest of the site stays static.
+    "run_worker_first": ["/api/og"]
+  }
 }

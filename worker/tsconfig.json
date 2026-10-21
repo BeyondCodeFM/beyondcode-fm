@@ -3,12 +3,12 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "lib": ["esnext"],
+    "lib": ["esnext", "DOM"],
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["./types.d.ts"]
+    "types": ["node", "./types.d.ts"]
   },
   "include": ["./**/*.ts", "./**/*.tsx"]
 }
