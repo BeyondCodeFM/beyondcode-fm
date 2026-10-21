@@ -1,10 +1,10 @@
 ## BeyondCodeFM (React)
 
-Vanilla React port of the old `headless` Next.js site (Vite + React Router + Tailwind). The site builds to a static Cloudflare Pages `dist/` folder (prerendered routes plus `404.html`). Open Graph images are generated at request time by a Pages Function using [`@cloudflare/pages-plugin-vercel-og`](https://developers.cloudflare.com/pages/functions/plugins/vercel-og/) (`GET /api/og?cover=`).
+Vanilla React port of the old `headless` Next.js site (Vite + React Router + Tailwind). The site builds to a static `dist/` folder (prerendered routes plus `404.html`) served as [Cloudflare Workers static assets](https://developers.cloudflare.com/workers/static-assets/). Open Graph images are generated at request time by the Worker in `worker/index.tsx` using [`@cloudflare/pages-plugin-vercel-og`](https://developers.cloudflare.com/pages/functions/plugins/vercel-og/) (`GET /api/og?cover=`).
 
 Coding agents: start at [`AGENTS.md`](AGENTS.md), then [`docs/architecture.md`](docs/architecture.md).
 
-Host: Cloudflare Pages (`beyondcode-fm`).
+Host: Cloudflare Workers (`beyondcode-fm`).
 
 ## Environment
 
@@ -26,10 +26,10 @@ npm run dev
 
 Routes are unprefixed (`/`, `/{episodeId}`). Legacy `/zh-CN` and `/en` URLs redirect to those paths. Theme is light → dark → system (button in the top-right).
 
-`npm run dev` / `npm run preview` serve the static site only. To exercise the OG Function locally:
+`npm run dev` / `npm run preview` serve the static site only. To exercise the OG Worker locally:
 
 ```bash
-npm run pages:dev
+npm run worker:dev
 ```
 
 Then open `/api/og?cover=` with a real cover URL (the podcast cover from the feed).
@@ -42,38 +42,34 @@ npm run build
 npm run preview
 ```
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare Workers
 
-Repo config lives in `wrangler.jsonc` (project name `beyondcode-fm`, output `dist`, `nodejs_compat`). Static HTML is unlimited; `_routes.json` only invokes Functions on `/api/og`.
+Repo config lives in `wrangler.jsonc` (Worker `beyondcode-fm`, static assets `dist`, `nodejs_compat`). Static asset requests are free and don't invoke the Worker; `assets.run_worker_first` only runs it for `/api/og`.
 
 ### Option A — Git integration (recommended)
 
 This is dashboard work you do once. Cloudflare will build on every push.
 
-1. Open [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages) → **Create** → **Pages** → **Connect to Git**.
-2. Authorize GitHub and select **`geekplux/beyondcode-fm`**.
+1. Open [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages) → **Create** → **Import a repository**.
+2. Authorize GitHub and select **`BeyondCodeFM/beyondcode-fm`**.
 3. Setup:
-   - **Project name:** `beyondcode-fm`
-   - **Production branch:** `main`
-   - **Preview:** all non-production branches (or restrict as you prefer)
-   - **Framework preset:** None (or Vite)
+   - **Project name:** `beyondcode-fm` (must match `name` in `wrangler.jsonc`)
    - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-   - **Root directory:** leave empty (the GitHub repo root *is* the site)
-4. Environment variables (Production **and** Preview):
+   - **Deploy command:** `npx wrangler deploy`
+   - **Root directory:** leave empty
+4. **Settings → Build → Variables and secrets** (these are read at build time):
    - `PODCAST_RSS_URL` = `https://feed.xyzfm.space/nfm8cu8deycn`
    - `NEXT_PUBLIC_OG_URL` = `https://beyondcodefm.com`
-5. **Save and Deploy.** You get `https://beyondcode-fm.pages.dev`.
+5. Deploy. You get `https://beyondcode-fm.<subdomain>.workers.dev`.
 
 ### Option B — CLI from this repo
 
 ```bash
 npx wrangler login          # once, in the browser
-npm run pages:deploy        # uploads dist + functions/
+npm run worker:deploy       # builds, uploads dist/ assets + worker/
 ```
 
 ### Custom domain
 
-1. Pages project → **Custom domains** → add `beyondcodefm.com` (and `www` if you use it).
-2. In DNS (Cloudflare DNS if the zone is on Cloudflare):
-   - Apex: `CNAME beyondcodefm.com` → `beyondcode-fm.pages.dev` (proxied), **or** use the dashboard “add domain” flow which writes the record.
+1. If the domain is still attached to the old Pages project, remove it there first.
+2. Worker → **Settings → Domains & Routes** → **Add → Custom domain** → `beyondcodefm.com` (and `www` if you use it). Cloudflare writes the DNS record when the zone is on Cloudflare.

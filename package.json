@@ -10,9 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc --noEmit",
-    "pages:dev": "npm run build && wrangler pages dev",
-    "pages:deploy": "npm run build && wrangler pages deploy"
+    "check": "tsc --noEmit && tsc -p worker",
+    "worker:dev": "npm run build && wrangler dev",
+    "worker:deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/pages-plugin-vercel-og": "^0.1.2",
